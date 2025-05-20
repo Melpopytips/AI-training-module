@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,13 +16,19 @@ Deno.serve(async (req) => {
   try {
     const { userInfo, answers, analysis, completedModules, totalModules } = await req.json();
 
-    if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
-      throw new Error('Supabase environment variables are not configured');
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase configuration');
+      throw new Error('Configuration error: Supabase credentials are not set');
     }
 
+    console.log('Creating Supabase client...');
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseKey,
       {
         auth: {
           autoRefreshToken: false,
@@ -30,6 +37,7 @@ Deno.serve(async (req) => {
       }
     );
 
+    console.log('Inserting submission into database...');
     const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
@@ -51,6 +59,7 @@ Deno.serve(async (req) => {
       throw new Error(`Database error: ${dbError.message}`);
     }
 
+    console.log('Submission successful');
     return new Response(
       JSON.stringify({ success: true, data }),
       { headers: corsHeaders }
@@ -58,7 +67,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Submission error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'An error occurred while saving the submission'
+      }),
       { 
         headers: corsHeaders,
         status: 500

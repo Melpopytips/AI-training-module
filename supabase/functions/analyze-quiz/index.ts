@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,12 +16,15 @@ Deno.serve(async (req) => {
   try {
     const { answers } = await req.json();
 
-    if (!Deno.env.get('OPENAI_API_KEY')) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    // Validate environment variables
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
+      console.error('OPENAI_API_KEY is missing');
+      throw new Error('Configuration error: OpenAI API key is not set');
     }
 
     const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
+      apiKey: openaiKey
     });
     const openai = new OpenAIApi(configuration);
 
@@ -52,6 +56,7 @@ Deno.serve(async (req) => {
       Answer: "${answers[3] || ''}"
     `;
 
+    console.log('Sending request to OpenAI...');
     const completion = await openai.createChatCompletion({
       model: "gpt-4",
       messages: [
@@ -67,6 +72,7 @@ Deno.serve(async (req) => {
     });
 
     const analysisText = completion.data.choices[0].message.content;
+    console.log('Received response from OpenAI');
     const analysis = JSON.parse(analysisText);
 
     return new Response(
@@ -76,7 +82,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Analysis error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: 'An error occurred during quiz analysis'
+      }),
       { 
         headers: corsHeaders,
         status: 500
