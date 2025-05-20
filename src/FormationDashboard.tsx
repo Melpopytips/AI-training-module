@@ -15,6 +15,8 @@ interface QuizSubmission {
 
 function FormationDashboard() {
   const [submissions, setSubmissions] = useState<QuizSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,17 +24,58 @@ function FormationDashboard() {
   }, []);
 
   async function fetchSubmissions() {
-    const { data, error } = await supabase
-      .from('quiz_submissions')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('quiz_submissions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching submissions:', error);
-      return;
+      if (error) {
+        throw error;
+      }
+
+      setSubmissions(data || []);
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
+      setError('Erreur lors du chargement des soumissions');
+    } finally {
+      setLoading(false);
     }
+  }
 
-    setSubmissions(data || []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement des résultats...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-3xl mx-auto bg-red-50 p-6 rounded-lg">
+          <h2 className="text-red-800 text-xl font-semibold mb-4">Une erreur est survenue</h2>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (submissions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Formation Dashboard</h1>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <p className="text-gray-600">Aucune soumission trouvée pour le moment.</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -42,7 +85,7 @@ function FormationDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Formation Dashboard</h1>
           <div className="flex items-center space-x-2 text-gray-500">
             <Clock className="w-5 h-5" />
-            <span>Last updated: {new Date().toLocaleString()}</span>
+            <span>Dernière mise à jour: {new Date().toLocaleString()}</span>
           </div>
         </div>
 
@@ -69,7 +112,7 @@ function FormationDashboard() {
                 <div className="flex items-center">
                   <BarChart className="w-5 h-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">
-                    Progress: {submission.completed_modules}/{submission.total_modules} modules
+                    Progression: {submission.completed_modules}/{submission.total_modules} modules
                   </span>
                 </div>
                 <span className="text-sm text-gray-500">
