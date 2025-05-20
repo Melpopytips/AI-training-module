@@ -55,13 +55,11 @@ function FormationDashboard() {
     const pageWidth = doc.internal.pageSize.width;
     const maxWidth = pageWidth - 2 * margin;
 
-    // Helper function for text wrapping
     const splitTextToSize = (text: string, fontSize: number) => {
       doc.setFontSize(fontSize);
       return doc.splitTextToSize(text, maxWidth);
     };
 
-    // Helper function to add a new page if needed
     const checkPageBreak = (neededSpace: number) => {
       if (yPos + neededSpace > doc.internal.pageSize.height - 20) {
         doc.addPage();
@@ -71,7 +69,6 @@ function FormationDashboard() {
       return false;
     };
 
-    // Helper function for section titles
     const addSectionTitle = (title: string) => {
       checkPageBreak(30);
       doc.setFillColor(66, 133, 244);
@@ -83,7 +80,6 @@ function FormationDashboard() {
       doc.setTextColor(0, 0, 0);
     };
 
-    // Helper function for content blocks
     const addContentBlock = (content: string[], fontSize = 12) => {
       doc.setFontSize(fontSize);
       content.forEach(text => {
@@ -102,7 +98,6 @@ function FormationDashboard() {
       yPos += 10;
     };
 
-    // Title page
     doc.setFillColor(66, 133, 244);
     doc.rect(0, 0, pageWidth, 100, 'F');
     doc.setTextColor(255, 255, 255);
@@ -113,7 +108,6 @@ function FormationDashboard() {
     doc.text('Responsables de Pôles', margin, 85);
     yPos = 120;
 
-    // Introduction
     addSectionTitle('Introduction : Pourquoi le prompting ?');
     addContentBlock([
       '• L\'IA n\'est pas devin - Elle a besoin d\'instructions claires',
@@ -121,7 +115,6 @@ function FormationDashboard() {
       '• La qualité de vos instructions détermine la qualité des réponses'
     ]);
 
-    // Les 5 éléments clés
     addSectionTitle('Les 5 éléments clés');
     addContentBlock([
       '1. Objectif clair - Ce que tu veux obtenir exactement',
@@ -131,7 +124,6 @@ function FormationDashboard() {
       '5. Niveau attendu - Basique, expert, vulgarisé'
     ]);
 
-    // Le modèle universel
     addSectionTitle('Le modèle universel');
     doc.setFillColor(240, 247, 255);
     doc.rect(margin - 5, yPos - 5, maxWidth + 10, 80, 'F');
@@ -143,7 +135,6 @@ function FormationDashboard() {
       'Fais-le de manière : [précise, experte, etc.]'
     ]);
 
-    // Exemple pratique
     addSectionTitle('Exemple pratique');
     doc.setFillColor(240, 247, 255);
     doc.rect(margin - 5, yPos - 5, maxWidth + 10, 100, 'F');
@@ -155,37 +146,34 @@ function FormationDashboard() {
       'Donne-moi un plan en 5 étapes pour améliorer leur engagement.'
     ]);
 
-    // Erreurs à éviter
     addSectionTitle('Erreurs à éviter');
     addContentBlock([
-      '❌ Les erreurs courantes :',
-      '   • Trop vague - "Aide-moi à améliorer mon équipe"',
-      '   • Pas de contexte - "Propose-moi une idée de post"',
-      '   • Demandes floues - "Sois original"',
+      'Les erreurs courantes :',
+      '• Trop vague - "Aide-moi à améliorer mon équipe"',
+      '• Pas de contexte - "Propose-moi une idée de post"',
+      '• Demandes floues - "Sois original"',
       '',
-      '✅ Les bonnes pratiques :',
-      '   • Toujours inclure le contexte complet',
-      '   • Définir un résultat mesurable',
-      '   • Spécifier les contraintes techniques',
-      '   • Demander un format précis'
+      'Les bonnes pratiques :',
+      '• Toujours inclure le contexte complet',
+      '• Définir un résultat mesurable',
+      '• Spécifier les contraintes techniques',
+      '• Demander un format précis'
     ]);
 
-    // Quiz final
     addSectionTitle('Quiz final');
     addContentBlock([
-      '📝 Exercices pratiques :',
+      'Exercices pratiques :',
       '',
-      '1. Transformez ce mauvais prompt en bon prompt',
-      '   Appliquez le modèle universel pour améliorer un prompt basique',
+      '• Question 1: Transformation de prompt',
+      '  Prenez un prompt basique et améliorez-le avec le modèle universel',
       '',
-      '2. Créez un prompt pour votre pôle spécifique',
-      '   Utilisez le contexte de votre équipe pour un cas concret',
+      '• Question 2: Création de prompt spécifique',
+      '  Appliquez les concepts à une situation réelle de votre pôle',
       '',
-      '3. Identifiez les erreurs dans un prompt donné',
-      '   Analysez et corrigez les faiblesses d\'un prompt existant'
+      '• Question 3: Analyse critique',
+      '  Identifiez et corrigez les faiblesses d\'un prompt existant'
     ]);
 
-    // Footer on each page
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
