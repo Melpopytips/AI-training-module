@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User } from 'lucide-react';
+import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User, Copy, Check } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 const FormationContent = () => {
@@ -8,6 +8,7 @@ const FormationContent = () => {
   const [completedModules, setCompletedModules] = useState(new Set());
   const [practiceAnswers, setPracticeAnswers] = useState({});
   const [showQuiz, setShowQuiz] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [userInfo, setUserInfo] = useState({
     nom: '',
     prenom: '',
@@ -15,6 +16,22 @@ const FormationContent = () => {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
+
+  const promptTemplate = `Je suis [rôle, pôle, contexte précis].
+Voici mon objectif : [objectif mesurable].
+Contraintes/outils : [infos techniques, limites].
+Je souhaite obtenir : [type de réponse].
+Fais-le de manière : [précise, experte, etc.]`;
+
+  const handleCopyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(promptTemplate);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
 
   const modules = [
     {
@@ -52,11 +69,7 @@ const FormationContent = () => {
       icon: <Settings className="w-6 h-6" />,
       duration: "5 min",
       content: {
-        template: `Je suis [rôle, pôle, contexte précis].
-Voici mon objectif : [objectif mesurable].
-Contraintes/outils : [infos techniques, limites].
-Je souhaite obtenir : [type de réponse].
-Fais-le de manière : [précise, experte, etc.]`,
+        template: promptTemplate,
         example: "Je suis responsable du pôle pédagogie chez Enfin Libre. Mon objectif est d'augmenter le taux de complétion de notre formation chez les élèves inactifs entre la semaine 2 et 3. Nous utilisons Kajabi et Slack. Donne-moi un plan en 5 étapes pour améliorer leur engagement."
       }
     },
@@ -209,7 +222,18 @@ Fais-le de manière : [précise, experte, etc.]`,
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold mb-4">🧰 Modèle universel de prompt</h3>
-            <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="bg-gray-50 p-6 rounded-lg relative group">
+              <button
+                onClick={handleCopyTemplate}
+                className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Copier le modèle"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-green-500" />
+                ) : (
+                  <Copy className="w-5 h-5" />
+                )}
+              </button>
               <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
                 {module.content.template}
               </pre>
