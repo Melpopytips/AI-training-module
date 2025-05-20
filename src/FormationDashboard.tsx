@@ -51,96 +51,131 @@ function FormationDashboard() {
     const margin = 20;
     const pageWidth = doc.internal.pageSize.width;
 
-    // Title
-    doc.setFontSize(24);
-    doc.text('Formation Prompting IA', margin, yPos);
-    yPos += lineHeight * 2;
+    // Helper functions for styling
+    const addTitle = (text: string) => {
+      doc.setFillColor(66, 133, 244);
+      doc.rect(0, yPos - 15, pageWidth, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.text(text, margin, yPos);
+      yPos += lineHeight * 2;
+      doc.setTextColor(0, 0, 0);
+    };
+
+    const addSection = (title: string, content: string[]) => {
+      // Section title with background
+      doc.setFillColor(240, 247, 255);
+      doc.rect(margin - 5, yPos - 5, pageWidth - 2 * margin + 10, 20, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(66, 133, 244);
+      doc.text(title, margin, yPos + 5);
+      yPos += lineHeight * 2;
+
+      // Section content
+      doc.setFontSize(12);
+      doc.setTextColor(60, 64, 67);
+      content.forEach(line => {
+        if (yPos > doc.internal.pageSize.height - 40) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.text(line, margin, yPos);
+        yPos += lineHeight;
+      });
+      yPos += lineHeight;
+    };
+
+    // Title page
+    addTitle('Formation Prompting IA');
+    doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
+    doc.text('ENFIN LIBRE - Responsables de Pôles', margin, yPos);
+    yPos += lineHeight * 3;
 
     // Introduction
-    doc.setFontSize(16);
-    doc.text('Introduction : Pourquoi le prompting ?', margin, yPos);
-    yPos += lineHeight;
-    doc.setFontSize(12);
-    doc.text('L\'IA n\'est pas devin - Elle a besoin d\'instructions claires', margin, yPos);
-    yPos += lineHeight * 2;
+    addSection('Introduction : Pourquoi le prompting ?', [
+      '• L\'IA n\'est pas devin - Elle a besoin d\'instructions claires',
+      '• Un bon prompt = des résultats précis et utiles',
+      '• La qualité de vos instructions détermine la qualité des réponses'
+    ]);
 
     // Les 5 éléments clés
-    doc.setFontSize(16);
-    doc.text('Les 5 éléments clés', margin, yPos);
-    yPos += lineHeight;
-    doc.setFontSize(12);
     const elements = [
-      '1. Objectif clair - Ce que tu veux obtenir exactement',
-      '2. Contexte - Ton rôle, pôle, outils, situation',
-      '3. Contraintes - Limites, ce que tu veux éviter',
-      '4. Format souhaité - Liste, plan, modèle, etc.',
-      '5. Niveau attendu - Basique, expert, vulgarisé'
+      '✓ Objectif clair - Ce que tu veux obtenir exactement',
+      '✓ Contexte - Ton rôle, pôle, outils, situation',
+      '✓ Contraintes - Limites, ce que tu veux éviter',
+      '✓ Format souhaité - Liste, plan, modèle, etc.',
+      '✓ Niveau attendu - Basique, expert, vulgarisé'
     ];
-    elements.forEach(element => {
-      doc.text(element, margin, yPos);
-      yPos += lineHeight;
-    });
-    yPos += lineHeight;
+    addSection('Les 5 éléments clés', elements);
 
     // Le modèle universel
-    doc.setFontSize(16);
-    doc.text('Le modèle universel', margin, yPos);
-    yPos += lineHeight;
-    doc.setFontSize(12);
+    doc.addPage();
+    yPos = 20;
     const template = [
-      'Je suis [rôle, pôle, contexte précis].',
-      'Voici mon objectif : [objectif mesurable].',
-      'Contraintes/outils : [infos techniques, limites].',
-      'Je souhaite obtenir : [type de réponse].',
-      'Fais-le de manière : [précise, experte, etc.]'
+      '1️⃣ Je suis [rôle, pôle, contexte précis].',
+      '2️⃣ Voici mon objectif : [objectif mesurable].',
+      '3️⃣ Contraintes/outils : [infos techniques, limites].',
+      '4️⃣ Je souhaite obtenir : [type de réponse].',
+      '5️⃣ Fais-le de manière : [précise, experte, etc.]'
     ];
-    template.forEach(line => {
-      doc.text(line, margin, yPos);
-      yPos += lineHeight;
-    });
-    yPos += lineHeight;
+    addSection('Le modèle universel', template);
+
+    // Exemple concret
+    const example = [
+      'Exemple pratique :',
+      '',
+      '"Je suis responsable du pôle pédagogie chez Enfin Libre.',
+      'Mon objectif est d\'augmenter le taux de complétion de notre',
+      'formation chez les élèves inactifs entre la semaine 2 et 3.',
+      'Nous utilisons Kajabi et Slack.',
+      'Donne-moi un plan en 5 étapes pour améliorer leur engagement."'
+    ];
+    addSection('Exemple concret', example);
 
     // Erreurs à éviter
-    if (yPos > doc.internal.pageSize.height - 40) {
-      doc.addPage();
-      yPos = 20;
-    }
-    doc.setFontSize(16);
-    doc.text('Erreurs à éviter', margin, yPos);
-    yPos += lineHeight;
-    doc.setFontSize(12);
+    doc.addPage();
+    yPos = 20;
     const errors = [
-      'Trop vague - "Aide-moi à améliorer mon équipe"',
-      'Pas de contexte - "Propose-moi une idée de post"',
-      'Demandes floues - "Sois original"'
+      '❌ Trop vague - "Aide-moi à améliorer mon équipe"',
+      '❌ Pas de contexte - "Propose-moi une idée de post"',
+      '❌ Demandes floues - "Sois original"',
+      '',
+      '✅ Solutions :',
+      '• Toujours inclure le contexte complet',
+      '• Définir un résultat mesurable',
+      '• Spécifier les contraintes techniques',
+      '• Demander un format précis'
     ];
-    errors.forEach(error => {
-      doc.text(error, margin, yPos);
-      yPos += lineHeight;
-    });
+    addSection('Erreurs à éviter', errors);
 
     // Quiz final
-    if (yPos > doc.internal.pageSize.height - 40) {
-      doc.addPage();
-      yPos = 20;
-    }
-    doc.setFontSize(16);
-    doc.text('Quiz final', margin, yPos);
-    yPos += lineHeight;
-    doc.setFontSize(12);
     const quiz = [
-      '1. Transformez ce mauvais prompt en bon prompt',
-      '2. Créez un prompt pour votre pôle spécifique',
-      '3. Identifiez les erreurs dans un prompt donné'
+      '📝 Question 1: Transformez ce mauvais prompt en bon prompt',
+      '📝 Question 2: Créez un prompt pour votre pôle spécifique',
+      '📝 Question 3: Identifiez les erreurs dans un prompt donné',
+      '',
+      '🎯 Objectif : Mettre en pratique les concepts appris'
     ];
-    quiz.forEach(question => {
-      doc.text(question, margin, yPos);
-      yPos += lineHeight;
-    });
+    addSection('Quiz final', quiz);
 
-    // Footer
-    doc.setFontSize(10);
-    doc.text('© Enfin Libre - Formation Prompting IA', margin, doc.internal.pageSize.height - 10);
+    // Footer on each page
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        '© Enfin Libre - Formation Prompting IA',
+        margin,
+        doc.internal.pageSize.height - 10
+      );
+      doc.text(
+        `Page ${i} sur ${pageCount}`,
+        pageWidth - margin - 20,
+        doc.internal.pageSize.height - 10
+      );
+    }
 
     doc.save('formation-prompting.pdf');
   };
