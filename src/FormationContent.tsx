@@ -86,34 +86,6 @@ Fais-le de manière : [précise, experte, etc.]`;
         ],
         solutions: ["Contexte complet", "Résultat attendu", "Contraintes opérationnelles", "Format clair"]
       }
-    },
-    {
-      id: 4,
-      title: "Quiz final",
-      icon: <Trophy className="w-6 h-6" />,
-      duration: "15 min",
-      content: {
-        exercises: [
-          { 
-            id: 1, 
-            question: "Transformez ce mauvais prompt en bon prompt :", 
-            prompt: "Je veux améliorer les ventes",
-            type: "transformation" 
-          },
-          { 
-            id: 2, 
-            question: "Créez un prompt pour votre pôle spécifique chez Enfin Libre :", 
-            prompt: "Décrivez une problématique de votre pôle et rédigez un prompt complet",
-            type: "creation" 
-          },
-          { 
-            id: 3, 
-            question: "Identifiez les erreurs dans ce prompt :", 
-            prompt: "Fais quelque chose de bien pour mon équipe qui soit original et utile",
-            type: "analyse" 
-          }
-        ]
-      }
     }
   ];
 
@@ -158,7 +130,6 @@ Fais-le de manière : [précise, experte, etc.]`;
       
       if (data.success) {
         setIsSubmitted(true);
-        markModuleComplete(4);
         navigate('/dashboard');
       } else {
         throw new Error('Failed to submit quiz');
@@ -274,7 +245,7 @@ Fais-le de manière : [précise, experte, etc.]`;
           </div>
         );
         
-      case 4:
+      default:
         return (
           <div className="space-y-6">
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-lg">
@@ -282,30 +253,61 @@ Fais-le de manière : [précise, experte, etc.]`;
               <p>Testez vos connaissances et obtenez une analyse détaillée de vos réponses !</p>
             </div>
             
-            {module.content.exercises.map((exercise, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-800 mb-2">Question {exercise.id}</h4>
-                <p className="text-gray-700 mb-2">{exercise.question}</p>
-                {exercise.prompt && (
-                  <div className="bg-gray-50 p-3 rounded mb-4 italic text-gray-600">
-                    "{exercise.prompt}"
-                  </div>
-                )}
-                <textarea
-                  className="w-full p-3 border border-gray-300 rounded-lg resize-none"
-                  rows="5"
-                  placeholder="Votre réponse..."
-                  value={practiceAnswers[exercise.id] || ''}
-                  onChange={(e) => setPracticeAnswers({
-                    ...practiceAnswers,
-                    [exercise.id]: e.target.value
-                  })}
-                  disabled={isSubmitted}
-                />
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-4">Question 1</h4>
+              <p className="text-gray-700 mb-2">Transformez ce mauvais prompt en bon prompt :</p>
+              <div className="bg-gray-50 p-3 rounded mb-4 italic text-gray-600">
+                "Je veux améliorer les ventes"
               </div>
-            ))}
+              <textarea
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                rows="5"
+                placeholder="Votre réponse..."
+                value={practiceAnswers[1] || ''}
+                onChange={(e) => setPracticeAnswers({
+                  ...practiceAnswers,
+                  1: e.target.value
+                })}
+                disabled={isSubmitted}
+              />
+            </div>
+
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-4">Question 2</h4>
+              <p className="text-gray-700 mb-2">Créez un prompt pour votre pôle spécifique :</p>
+              <textarea
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                rows="5"
+                placeholder="Votre réponse..."
+                value={practiceAnswers[2] || ''}
+                onChange={(e) => setPracticeAnswers({
+                  ...practiceAnswers,
+                  2: e.target.value
+                })}
+                disabled={isSubmitted}
+              />
+            </div>
+
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <h4 className="font-semibold text-gray-800 mb-4">Question 3</h4>
+              <p className="text-gray-700 mb-2">Identifiez les erreurs dans ce prompt :</p>
+              <div className="bg-gray-50 p-3 rounded mb-4 italic text-gray-600">
+                "Fais quelque chose de bien pour mon équipe qui soit original et utile"
+              </div>
+              <textarea
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                rows="5"
+                placeholder="Votre réponse..."
+                value={practiceAnswers[3] || ''}
+                onChange={(e) => setPracticeAnswers({
+                  ...practiceAnswers,
+                  3: e.target.value
+                })}
+                disabled={isSubmitted}
+              />
+            </div>
             
-            {!isSubmitted ? (
+            {!isSubmitted && (
               <div className="bg-green-50 p-6 rounded-lg">
                 <button
                   onClick={submitQuiz}
@@ -315,18 +317,9 @@ Fais-le de manière : [précise, experte, etc.]`;
                   Soumettre mes réponses et voir l'analyse
                 </button>
               </div>
-            ) : (
-              <div className="bg-green-100 p-6 rounded-lg text-center">
-                <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <h4 className="text-lg font-semibold text-green-800 mb-2">Quiz soumis avec succès !</h4>
-                <p className="text-green-700">Vous allez être redirigé vers le tableau de bord pour voir l'analyse.</p>
-              </div>
             )}
           </div>
         );
-        
-      default:
-        return null;
     }
   };
 
@@ -438,6 +431,27 @@ Fais-le de manière : [précise, experte, etc.]`;
                     </div>
                   </button>
                 ))}
+                <button
+                  onClick={() => setCurrentModule(4)}
+                  className={`w-full text-left p-3 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                    currentModule === 4
+                      ? 'bg-blue-100 border border-blue-200 text-blue-800'
+                      : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                  disabled={completedModules.size < modules.length}
+                >
+                  <div className="flex-shrink-0">
+                    {isSubmitted ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <Trophy className="w-5 h-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">Quiz final</p>
+                    <p className="text-xs text-gray-500">15 min</p>
+                  </div>
+                </button>
               </nav>
             </div>
           </div>
@@ -447,11 +461,15 @@ Fais-le de manière : [précise, experte, etc.]`;
             <div className="bg-white rounded-lg shadow-sm p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">{modules[currentModule].title}</h2>
-                  <p className="text-gray-600">Durée estimée : {modules[currentModule].duration}</p>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {currentModule === 4 ? "Quiz final" : modules[currentModule].title}
+                  </h2>
+                  <p className="text-gray-600">
+                    Durée estimée : {currentModule === 4 ? "15 min" : modules[currentModule].duration}
+                  </p>
                 </div>
                 <div className="flex gap-2">
-                  {currentModule > 0 && (
+                  {currentModule > 0 && currentModule !== 4 && (
                     <button
                       onClick={() => setCurrentModule(currentModule - 1)}
                       className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"

@@ -52,20 +52,35 @@ Deno.serve(async (req) => {
     const openai = new OpenAIApi(configuration);
 
     const analysisPrompt = `
-      Analyze these quiz answers for a prompting course and provide feedback in French.
-      For each answer, provide:
-      1. A score out of 10
-      2. Detailed feedback
-      3. Specific suggestions for improvement
+      En tant qu'expert en prompt engineering, analysez ces réponses de quiz et fournissez une évaluation détaillée en français.
+      
+      Pour chaque réponse :
+      1. Donnez une note sur 10
+      2. Expliquez les points forts et les points à améliorer
+      3. Donnez des suggestions d'amélioration concrètes
+      
+      À la fin, donnez une évaluation globale du niveau selon cette échelle :
+      - Novice : Comprend les bases mais nécessite plus de pratique
+      - Intermédiaire : Bonne maîtrise des concepts fondamentaux
+      - Avancé : Excellente compréhension et application
+      - Expert : Maîtrise exceptionnelle et créativité
+      - Illuminé : Niveau remarquable, innovation et excellence
 
-      Question 1: Transform this bad prompt: "Je veux améliorer les ventes"
-      Answer: "${submission.answer_1 || ''}"
+      Question 1: Transformer ce mauvais prompt "Je veux améliorer les ventes"
+      Réponse: "${submission.answer_1 || ''}"
 
-      Question 2: Create a prompt for your specific department at Enfin Libre
-      Answer: "${submission.answer_2 || ''}"
+      Question 2: Créer un prompt pour votre pôle spécifique
+      Réponse: "${submission.answer_2 || ''}"
 
-      Question 3: Identify errors in this prompt: "Fais quelque chose de bien pour mon équipe qui soit original et utile"
-      Answer: "${submission.answer_3 || ''}"
+      Question 3: Identifier les erreurs dans "Fais quelque chose de bien pour mon équipe qui soit original et utile"
+      Réponse: "${submission.answer_3 || ''}"
+
+      Basez l'évaluation sur :
+      - L'utilisation du modèle universel
+      - La précision du contexte
+      - La clarté des objectifs
+      - La pertinence des contraintes
+      - La qualité globale du prompt
     `;
 
     console.log('Sending request to OpenAI...');
@@ -74,7 +89,7 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "You are an expert prompt engineering instructor. Analyze quiz submissions and provide constructive feedback in French."
+          content: "Vous êtes un expert en prompt engineering qui évalue les compétences des apprenants. Vos analyses sont constructives, détaillées et encourageantes."
         },
         {
           role: "user",
