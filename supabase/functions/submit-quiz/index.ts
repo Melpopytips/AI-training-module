@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
         answer_1: answers[1] || null,
         answer_2: answers[2] || null,
         answer_3: answers[3] || null,
-        analysis: analysis,
+        analysis: JSON.stringify(analysis),
         completed_modules: completedModules,
         total_modules: totalModules
       })
