@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const FormationContent = () => {
   const [currentModule, setCurrentModule] = useState(0);
   const [completedModules, setCompletedModules] = useState(new Set());
   const [practiceAnswers, setPracticeAnswers] = useState({});
-  const [analysisResults, setAnalysisResults] = useState({});
+  const [showQuiz, setShowQuiz] = useState(false);
   const [userInfo, setUserInfo] = useState({
     nom: '',
     prenom: '',
     email: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const navigate = useNavigate();
 
   const modules = [
     {
@@ -119,27 +121,7 @@ Fais-le de manière : [précise, experte, etc.]`,
       return;
     }
 
-    setIsAnalyzing(true);
-
     try {
-      const analysisResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-quiz`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          answers: practiceAnswers
-        })
-      });
-
-      if (!analysisResponse.ok) {
-        throw new Error('Failed to analyze quiz');
-      }
-
-      const analysisData = await analysisResponse.json();
-      setAnalysisResults(analysisData.analysis);
-
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-quiz`, {
         method: 'POST',
         headers: {
@@ -149,23 +131,28 @@ Fais-le de manière : [précise, experte, etc.]`,
         body: JSON.stringify({
           userInfo,
           answers: practiceAnswers,
-          analysis: analysisData.analysis,
           completedModules: completedModules.size,
           totalModules: modules.length
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to submit quiz');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit quiz');
       }
 
-      setIsSubmitted(true);
-      markModuleComplete(4);
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsSubmitted(true);
+        markModuleComplete(4);
+        navigate('/dashboard');
+      } else {
+        throw new Error('Failed to submit quiz');
+      }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Une erreur est survenue. Veuillez réessayer.');
-    } finally {
-      setIsAnalyzing(false);
+      console.error('Error submitting quiz:', error);
+      alert('Une erreur est survenue lors de l\'envoi du quiz. Veuillez réessayer.');
     }
   };
 
@@ -272,49 +259,25 @@ Fais-le de manière : [précise, experte, etc.]`,
             </div>
             
             {module.content.exercises.map((exercise, idx) => (
-              <div key={idx} className="space-y-4">
-                <div className="bg-white p-6 rounded-lg border border-gray-200">
-                  <h4 className="font-semibold text-gray-800 mb-2">Question {exercise.id}</h4>
-                  <p className="text-gray-700 mb-2">{exercise.question}</p>
-                  {exercise.prompt && (
-                    <div className="bg-gray-50 p-3 rounded mb-4 italic text-gray-600">
-                      "{exercise.prompt}"
-                    </div>
-                  )}
-                  <textarea
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-none"
-                    rows="5"
-                    placeholder="Votre réponse..."
-                    value={practiceAnswers[exercise.id] || ''}
-                    onChange={(e) => setPracticeAnswers({
-                      ...practiceAnswers,
-                      [exercise.id]: e.target.value
-                    })}
-                    disabled={isSubmitted}
-                  />
-                </div>
-                
-                {isSubmitted && analysisResults[exercise.id] && (
-                  <div className="bg-blue-50 p-6 rounded-lg">
-                    <div className="flex items-center justify-between mb-4">
-                      <h5 className="font-semibold text-blue-800">Analyse de votre réponse</h5>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
-                        Score: {analysisResults[exercise.id].score}/10
-                      </span>
-                    </div>
-                    <div className="prose prose-blue max-w-none">
-                      <p className="text-blue-700">{analysisResults[exercise.id].feedback}</p>
-                      <div className="mt-4">
-                        <h6 className="font-medium text-blue-800">Suggestions d'amélioration :</h6>
-                        <ul className="list-disc list-inside text-blue-700">
-                          {analysisResults[exercise.id].suggestions.map((suggestion, i) => (
-                            <li key={i}>{suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+              <div key={idx} className="bg-white p-6 rounded-lg border border-gray-200">
+                <h4 className="font-semibold text-gray-800 mb-2">Question {exercise.id}</h4>
+                <p className="text-gray-700 mb-2">{exercise.question}</p>
+                {exercise.prompt && (
+                  <div className="bg-gray-50 p-3 rounded mb-4 italic text-gray-600">
+                    "{exercise.prompt}"
                   </div>
                 )}
+                <textarea
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                  rows="5"
+                  placeholder="Votre réponse..."
+                  value={practiceAnswers[exercise.id] || ''}
+                  onChange={(e) => setPracticeAnswers({
+                    ...practiceAnswers,
+                    [exercise.id]: e.target.value
+                  })}
+                  disabled={isSubmitted}
+                />
               </div>
             ))}
             
@@ -322,27 +285,17 @@ Fais-le de manière : [précise, experte, etc.]`,
               <div className="bg-green-50 p-6 rounded-lg">
                 <button
                   onClick={submitQuiz}
-                  disabled={isAnalyzing}
-                  className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2"
                 >
-                  {isAnalyzing ? (
-                    <>
-                      <span className="animate-spin">⏳</span>
-                      Analyse en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Trophy className="w-5 h-5" />
-                      Soumettre mes réponses et voir l'analyse
-                    </>
-                  )}
+                  <Trophy className="w-5 h-5" />
+                  Soumettre mes réponses et voir l'analyse
                 </button>
               </div>
             ) : (
               <div className="bg-green-100 p-6 rounded-lg text-center">
                 <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <h4 className="text-lg font-semibold text-green-800 mb-2">Quiz terminé !</h4>
-                <p className="text-green-700">Vous pouvez consulter l'analyse de vos réponses ci-dessus.</p>
+                <h4 className="text-lg font-semibold text-green-800 mb-2">Quiz soumis avec succès !</h4>
+                <p className="text-green-700">Vous allez être redirigé vers le tableau de bord pour voir l'analyse.</p>
               </div>
             )}
           </div>
@@ -357,6 +310,7 @@ Fais-le de manière : [précise, experte, etc.]`,
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -380,6 +334,7 @@ Fais-le de manière : [précise, experte, etc.]`,
         </div>
       </div>
 
+      {/* User Info Form */}
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="grid md:grid-cols-3 gap-4">
@@ -431,6 +386,7 @@ Fais-le de manière : [précise, experte, etc.]`,
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid lg:grid-cols-4 gap-8">
+          {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="font-semibold text-gray-800 mb-4">Modules</h2>
@@ -462,6 +418,7 @@ Fais-le de manière : [précise, experte, etc.]`,
             </div>
           </div>
 
+          {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-sm p-8">
               <div className="flex items-center justify-between mb-6">
@@ -492,10 +449,12 @@ Fais-le de manière : [précise, experte, etc.]`,
                 </div>
               </div>
 
+              {/* Module Content */}
               <div className="prose max-w-none">
                 {renderModuleContent()}
               </div>
 
+              {/* Complete Module Button */}
               {!completedModules.has(currentModule) && currentModule !== 4 && (
                 <div className="mt-8 pt-6 border-t border-gray-200">
                   <button
@@ -511,6 +470,7 @@ Fais-le de manière : [précise, experte, etc.]`,
           </div>
         </div>
 
+        {/* Summary Card */}
         <div className="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-8">
           <div className="text-center">
             <h3 className="text-2xl font-bold mb-4">🚀 Le prompting, c'est un super pouvoir !</h3>

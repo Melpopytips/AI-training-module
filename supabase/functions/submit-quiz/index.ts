@@ -4,31 +4,21 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { userInfo, answers, analysis, completedModules, totalModules } = await req.json();
+    const { userInfo, answers, completedModules, totalModules } = await req.json();
 
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase configuration');
-      throw new Error('Configuration error: Supabase credentials are not set');
-    }
-
-    console.log('Creating Supabase client...');
+    // Create Supabase admin client
     const supabaseAdmin = createClient(
-      supabaseUrl,
-      supabaseKey,
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -37,7 +27,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    console.log('Inserting submission into database...');
+    // Store the quiz submission in the database
     const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
@@ -47,7 +37,6 @@ Deno.serve(async (req) => {
         answer_1: answers[1] || null,
         answer_2: answers[2] || null,
         answer_3: answers[3] || null,
-        analysis: JSON.stringify(analysis),
         completed_modules: completedModules,
         total_modules: totalModules
       })
@@ -55,25 +44,22 @@ Deno.serve(async (req) => {
       .single();
 
     if (dbError) {
-      console.error('Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
-    console.log('Submission successful');
     return new Response(
       JSON.stringify({ success: true, data }),
-      { headers: corsHeaders }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   } catch (error) {
-    console.error('Submission error:', error);
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'An error occurred while saving the submission'
-      }),
-      { 
-        headers: corsHeaders,
-        status: 500
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
