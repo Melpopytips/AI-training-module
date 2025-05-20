@@ -15,6 +15,11 @@ Deno.serve(async (req) => {
   try {
     const { userInfo, answers, completedModules, totalModules } = await req.json();
 
+    // Validate required fields
+    if (!userInfo?.prenom || !userInfo?.nom || !userInfo?.email) {
+      throw new Error('Missing required user information');
+    }
+
     // Create Supabase admin client
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -44,11 +49,20 @@ Deno.serve(async (req) => {
       .single();
 
     if (dbError) {
+      console.error('Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
+    if (!data) {
+      throw new Error('No data returned from submission');
+    }
+
     return new Response(
-      JSON.stringify({ success: true, data }),
+      JSON.stringify({ 
+        success: true, 
+        data,
+        message: 'Quiz submitted successfully'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
@@ -56,7 +70,11 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false,
+        error: error.message,
+        details: 'Failed to submit quiz'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
