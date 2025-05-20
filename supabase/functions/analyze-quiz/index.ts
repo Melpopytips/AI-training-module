@@ -4,15 +4,20 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { answers } = await req.json();
+
+    if (!Deno.env.get('OPENAI_API_KEY')) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
 
     const configuration = new Configuration({
       apiKey: Deno.env.get('OPENAI_API_KEY'),
@@ -26,13 +31,13 @@ Deno.serve(async (req) => {
       3. Specific suggestions for improvement
 
       Question 1: Transform this bad prompt: "Je veux améliorer les ventes"
-      Answer: "${answers[1]}"
+      Answer: "${answers[1] || ''}"
 
       Question 2: Create a prompt for your specific department at Enfin Libre
-      Answer: "${answers[2]}"
+      Answer: "${answers[2] || ''}"
 
       Question 3: Identify errors in this prompt: "Fais quelque chose de bien pour mon équipe qui soit original et utile"
-      Answer: "${answers[3]}"
+      Answer: "${answers[3] || ''}"
     `;
 
     const completion = await openai.createChatCompletion({
@@ -67,26 +72,22 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Parse the response and structure it
     const responseText = completion.data.choices[0].message.content;
     const sections = responseText.split(/Question \d+/g).filter(Boolean);
     
     sections.forEach((section, index) => {
       const questionNumber = index + 1;
       
-      // Extract score (assuming it's written as "Score: X/10" or similar)
       const scoreMatch = section.match(/\b(\d+)\/10\b/);
       if (scoreMatch) {
         analysis[questionNumber].score = parseInt(scoreMatch[1]);
       }
 
-      // Extract feedback (assuming it's the first paragraph after the score)
       const feedbackMatch = section.match(/[^.!?]+[.!?]+/);
       if (feedbackMatch) {
         analysis[questionNumber].feedback = feedbackMatch[0].trim();
       }
 
-      // Extract suggestions (assuming they're listed with bullet points or numbers)
       const suggestions = section.match(/[-•]\s+([^•\n]+)/g);
       if (suggestions) {
         analysis[questionNumber].suggestions = suggestions.map(s => 
@@ -97,16 +98,15 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ analysis }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: corsHeaders }
     );
   } catch (error) {
+    console.error('Analysis error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+      { 
+        headers: corsHeaders,
+        status: 500
       }
     );
   }

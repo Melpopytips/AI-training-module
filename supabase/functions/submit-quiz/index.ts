@@ -4,15 +4,20 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { userInfo, answers, analysis, completedModules, totalModules } = await req.json();
+
+    if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      throw new Error('Supabase environment variables are not configured');
+    }
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -24,13 +29,6 @@ Deno.serve(async (req) => {
         },
       }
     );
-
-    console.log('Submitting quiz with data:', {
-      userInfo,
-      completedModules,
-      totalModules,
-      analysisPresent: !!analysis
-    });
 
     const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
@@ -45,7 +43,8 @@ Deno.serve(async (req) => {
         completed_modules: completedModules,
         total_modules: totalModules
       })
-      .select();
+      .select()
+      .single();
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -54,17 +53,15 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, data }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: corsHeaders }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Submission error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+      { 
+        headers: corsHeaders,
+        status: 500
       }
     );
   }
