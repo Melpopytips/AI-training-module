@@ -12,6 +12,8 @@ const QuizAnalysis = () => {
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
+        setLoading(true);
+        
         // First check if we already have an analysis
         const { data: submission, error: fetchError } = await supabase
           .from('quiz_submissions')
@@ -38,19 +40,40 @@ const QuizAnalysis = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch analysis');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch analysis');
         }
 
         const data = await response.json();
+        
+        if (!data.analysis) {
+          throw new Error('No analysis received from the server');
+        }
+
         setAnalysis(data.analysis);
+
+        // Verify the analysis was saved
+        const { data: updatedSubmission, error: verifyError } = await supabase
+          .from('quiz_submissions')
+          .select('analysis')
+          .eq('id', submissionId)
+          .single();
+
+        if (verifyError || !updatedSubmission.analysis) {
+          console.error('Analysis may not have been saved:', verifyError);
+        }
+
       } catch (err) {
+        console.error('Error:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAnalysis();
+    if (submissionId) {
+      fetchAnalysis();
+    }
   }, [submissionId]);
 
   if (loading) {
@@ -91,12 +114,15 @@ const QuizAnalysis = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Analyse de vos réponses</h1>
           
           <div className="prose max-w-none">
-            {analysis.split('\n').map((line, index) => {
+            {analysis && analysis.split('\n').map((line, index) => {
               if (line.trim().startsWith('Question')) {
                 return <h2 key={index} className="text-xl font-semibold mt-8 mb-4">{line}</h2>;
               }
               if (line.trim().startsWith('Score')) {
                 return <p key={index} className="text-lg font-medium text-blue-600">{line}</p>;
+              }
+              if (line.trim().startsWith('Niveau')) {
+                return <p key={index} className="text-xl font-bold text-green-600 mt-8">{line}</p>;
               }
               return <p key={index} className="mb-2">{line}</p>;
             })}
