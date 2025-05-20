@@ -57,6 +57,24 @@ Deno.serve(async (req) => {
       throw new Error('No data returned from submission');
     }
 
+    // Trigger the analysis immediately after submission
+    try {
+      const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/analyze-quiz`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId: data.id })
+      });
+
+      if (!response.ok) {
+        console.error('Analysis request failed:', await response.text());
+      }
+    } catch (analysisError) {
+      console.error('Error triggering analysis:', analysisError);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
