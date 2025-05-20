@@ -21,18 +21,16 @@ Deno.serve(async (req) => {
     }
 
     // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase configuration is missing');
+    }
 
-    // Store the quiz submission in the database
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Store the quiz submission
     const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
@@ -57,9 +55,9 @@ Deno.serve(async (req) => {
       throw new Error('No data returned from submission');
     }
 
-    // Trigger the analysis immediately after submission
+    // Trigger analysis immediately
     try {
-      const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/analyze-quiz`, {
+      const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
@@ -68,8 +66,8 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ submissionId: data.id })
       });
 
-      if (!response.ok) {
-        console.error('Analysis request failed:', await response.text());
+      if (!analyzeResponse.ok) {
+        console.error('Analysis request failed:', await analyzeResponse.text());
       }
     } catch (analysisError) {
       console.error('Error triggering analysis:', analysisError);
