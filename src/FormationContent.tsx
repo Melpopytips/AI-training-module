@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User, Copy, Check } from 'lucide-react';
 import { supabase } from './supabaseClient';
@@ -16,6 +16,13 @@ const FormationContent = () => {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
+
+  // Add useEffect to monitor completedModules
+  useEffect(() => {
+    if (completedModules.size === 4) {
+      setCurrentModule(4); // Automatically switch to quiz (module index 4)
+    }
+  }, [completedModules]);
 
   const promptTemplate = `Je suis [rôle, pôle, contexte précis].
 Voici mon objectif : [objectif mesurable].
@@ -97,7 +104,8 @@ Fais-le de manière : [précise, experte, etc.]`;
   };
 
   const markModuleComplete = (moduleId) => {
-    setCompletedModules(new Set([...completedModules, moduleId]));
+    const newCompletedModules = new Set([...completedModules, moduleId]);
+    setCompletedModules(newCompletedModules);
   };
 
   const submitQuiz = async () => {
