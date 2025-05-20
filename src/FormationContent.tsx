@@ -78,7 +78,7 @@ Fais-le de manière : [précise, experte, etc.]`,
       id: 4,
       title: "Quiz final",
       icon: <Trophy className="w-6 h-6" />,
-      duration: "5 min",
+      duration: "15 min",
       content: {
         exercises: [
           { 
