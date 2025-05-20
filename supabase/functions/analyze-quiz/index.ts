@@ -1,3 +1,4 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
 import { Configuration, OpenAIApi } from 'npm:openai@4.28.0';
 
 const corsHeaders = {
@@ -14,13 +15,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { answers } = await req.json();
+    const { submissionId } = await req.json();
 
     // Validate environment variables
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) {
       console.error('OPENAI_API_KEY is missing');
       throw new Error('Configuration error: OpenAI API key is not set');
+    }
+
+    // Create Supabase client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Fetch the submission
+    const { data: submission, error: fetchError } = await supabaseAdmin
+      .from('quiz_submissions')
+      .select('*')
+      .eq('id', submissionId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching submission:', fetchError);
+      throw new Error('Failed to fetch submission');
+    }
+
+    if (!submission) {
+      throw new Error('Submission not found');
     }
 
     const configuration = new Configuration({
@@ -35,25 +58,14 @@ Deno.serve(async (req) => {
       2. Detailed feedback
       3. Specific suggestions for improvement
 
-      Format the response as a JSON object with this structure:
-      {
-        "1": {
-          "score": number,
-          "feedback": string,
-          "suggestions": string[]
-        },
-        "2": {...},
-        "3": {...}
-      }
-
       Question 1: Transform this bad prompt: "Je veux améliorer les ventes"
-      Answer: "${answers[1] || ''}"
+      Answer: "${submission.answer_1 || ''}"
 
       Question 2: Create a prompt for your specific department at Enfin Libre
-      Answer: "${answers[2] || ''}"
+      Answer: "${submission.answer_2 || ''}"
 
       Question 3: Identify errors in this prompt: "Fais quelque chose de bien pour mon équipe qui soit original et utile"
-      Answer: "${answers[3] || ''}"
+      Answer: "${submission.answer_3 || ''}"
     `;
 
     console.log('Sending request to OpenAI...');
@@ -62,7 +74,7 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "You are an expert prompt engineering instructor. Analyze quiz submissions and provide constructive feedback in French. Your response must be a valid JSON object following the specified structure."
+          content: "You are an expert prompt engineering instructor. Analyze quiz submissions and provide constructive feedback in French."
         },
         {
           role: "user",
@@ -71,9 +83,19 @@ Deno.serve(async (req) => {
       ]
     });
 
-    const analysisText = completion.data.choices[0].message.content;
+    const analysis = completion.data.choices[0].message.content;
     console.log('Received response from OpenAI');
-    const analysis = JSON.parse(analysisText);
+
+    // Store the analysis in the database
+    const { error: updateError } = await supabaseAdmin
+      .from('quiz_submissions')
+      .update({ analysis })
+      .eq('id', submissionId);
+
+    if (updateError) {
+      console.error('Error updating submission:', updateError);
+      throw new Error('Failed to save analysis');
+    }
 
     return new Response(
       JSON.stringify({ analysis }),
