@@ -297,3 +297,5 @@ function FormationDashboard() {
 }
 
 export default FormationDashboard;
+
+export default FormationDashboard
