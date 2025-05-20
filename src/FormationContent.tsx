@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User, Copy, Check } from 'lucide-react';
+import { CheckCircle2, Play, BookOpen, Target, Lightbulb, AlertTriangle, Trophy, Users, ArrowRight, Brain, Zap, MessageSquare, Settings, Mail, User, Copy, Check, Loader2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 const FormationContent = () => {
@@ -9,6 +9,7 @@ const FormationContent = () => {
   const [practiceAnswers, setPracticeAnswers] = useState({});
   const [showQuiz, setShowQuiz] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [userInfo, setUserInfo] = useState({
     nom: '',
     prenom: '',
@@ -17,10 +18,9 @@ const FormationContent = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  // Add useEffect to monitor completedModules
   useEffect(() => {
     if (completedModules.size === 4) {
-      setCurrentModule(4); // Automatically switch to quiz (module index 4)
+      setCurrentModule(4);
     }
   }, [completedModules]);
 
@@ -115,6 +115,8 @@ Fais-le de manière : [précise, experte, etc.]`;
     }
 
     try {
+      setIsSubmitting(true);
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-quiz`, {
         method: 'POST',
         headers: {
@@ -145,6 +147,8 @@ Fais-le de manière : [précise, experte, etc.]`;
     } catch (error) {
       console.error('Error submitting quiz:', error);
       alert('Une erreur est survenue lors de l\'envoi du quiz. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -319,10 +323,24 @@ Fais-le de manière : [précise, experte, etc.]`;
               <div className="bg-green-50 p-6 rounded-lg">
                 <button
                   onClick={submitQuiz}
-                  className="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className={`w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 ${
+                    isSubmitting 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white transition-colors`}
                 >
-                  <Trophy className="w-5 h-5" />
-                  Soumettre mes réponses et voir l'analyse
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Les réponses sont en cours d'analyse...
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-5 h-5" />
+                      Soumettre mes réponses et voir l'analyse
+                    </>
+                  )}
                 </button>
               </div>
             )}
