@@ -25,7 +25,14 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { error: dbError } = await supabaseAdmin
+    console.log('Submitting quiz with data:', {
+      userInfo,
+      completedModules,
+      totalModules,
+      analysisPresent: !!analysis
+    });
+
+    const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
         user_first_name: userInfo.prenom,
@@ -37,14 +44,16 @@ Deno.serve(async (req) => {
         analysis: JSON.stringify(analysis),
         completed_modules: completedModules,
         total_modules: totalModules
-      });
+      })
+      .select();
 
     if (dbError) {
+      console.error('Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, data }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
