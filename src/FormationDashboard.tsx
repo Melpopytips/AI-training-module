@@ -12,33 +12,36 @@ interface QuizSubmission {
   completed_modules: number;
   total_modules: number;
   created_at: string;
+  analysis: string;
 }
 
 function FormationDashboard() {
-  const [submissions, setSubmissions] = useState<QuizSubmission[]>([]);
+  const [submission, setSubmission] = useState<QuizSubmission | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchSubmissions();
+    fetchLatestSubmission();
   }, []);
 
-  async function fetchSubmissions() {
+  async function fetchLatestSubmission() {
     try {
       const { data, error } = await supabase
         .from('quiz_submissions')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
       if (error) {
         throw error;
       }
 
-      setSubmissions(data || []);
+      setSubmission(data);
     } catch (err) {
-      console.error('Error fetching submissions:', err);
-      setError('Erreur lors du chargement des soumissions');
+      console.error('Error fetching submission:', err);
+      setError('Erreur lors du chargement de votre soumission');
     } finally {
       setLoading(false);
     }
@@ -63,7 +66,6 @@ function FormationDashboard() {
     };
 
     const addSection = (title: string, content: string[]) => {
-      // Section title with background
       doc.setFillColor(240, 247, 255);
       doc.rect(margin - 5, yPos - 5, pageWidth - 2 * margin + 10, 20, 'F');
       doc.setFontSize(16);
@@ -71,7 +73,6 @@ function FormationDashboard() {
       doc.text(title, margin, yPos + 5);
       yPos += lineHeight * 2;
 
-      // Section content
       doc.setFontSize(12);
       doc.setTextColor(60, 64, 67);
       content.forEach(line => {
@@ -185,7 +186,7 @@ function FormationDashboard() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des résultats...</p>
+          <p className="mt-4 text-gray-600">Chargement de votre analyse...</p>
         </div>
       </div>
     );
@@ -202,13 +203,13 @@ function FormationDashboard() {
     );
   }
 
-  if (submissions.length === 0) {
+  if (!submission) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Formation Dashboard</h1>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <p className="text-gray-600">Aucune soumission trouvée pour le moment.</p>
+            <p className="text-gray-600">Aucune soumission trouvée.</p>
           </div>
         </div>
       </div>
@@ -219,7 +220,7 @@ function FormationDashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Formation Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Analyse de votre quiz</h1>
           <div className="flex items-center gap-4">
             <button
               onClick={generatePDF}
@@ -230,54 +231,50 @@ function FormationDashboard() {
             </button>
             <div className="flex items-center space-x-2 text-gray-500">
               <Clock className="w-5 h-5" />
-              <span>Dernière mise à jour: {new Date().toLocaleString()}</span>
+              <span>Soumis le: {new Date(submission.created_at).toLocaleString()}</span>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 mb-8 md:grid-cols-2 xl:grid-cols-3">
-          {submissions.map((submission) => (
-            <div
-              key={submission.id}
-              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/analysis/${submission.id}`)}
-            >
-              <div className="flex items-center mb-4">
-                <div className="bg-blue-100 rounded-full p-3">
-                  <User className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {submission.user_first_name} {submission.user_last_name}
-                  </h2>
-                  <p className="text-sm text-gray-500">{submission.user_email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <BarChart className="w-5 h-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-600">
-                    Progression: {submission.completed_modules}/{submission.total_modules} modules
-                  </span>
-                </div>
-                <span className="text-sm text-gray-500">
-                  {new Date(submission.created_at).toLocaleDateString()}
-                </span>
-              </div>
-
-              <div className="relative pt-1">
-                <div className="overflow-hidden h-2 text-xs flex rounded bg-blue-100">
-                  <div
-                    style={{
-                      width: `${(submission.completed_modules / submission.total_modules) * 100}%`
-                    }}
-                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
-                  />
-                </div>
-              </div>
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <div className="flex items-center mb-6">
+            <div className="bg-blue-100 rounded-full p-3">
+              <User className="w-6 h-6 text-blue-600" />
             </div>
-          ))}
+            <div className="ml-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {submission.user_first_name} {submission.user_last_name}
+              </h2>
+              <p className="text-gray-500">{submission.user_email}</p>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Progression</span>
+              <span className="text-sm font-medium text-blue-600">
+                {Math.round((submission.completed_modules / submission.total_modules) * 100)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full"
+                style={{
+                  width: `${(submission.completed_modules / submission.total_modules) * 100}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="prose max-w-none">
+            <h3 className="text-xl font-semibold mb-4">Analyse détaillée</h3>
+            {submission.analysis && submission.analysis.split('\n').map((line, index) => {
+              if (line.trim().startsWith('Question')) {
+                return <h4 key={index} className="text-lg font-medium mt-6 mb-2">{line}</h4>;
+              }
+              return <p key={index} className="mb-2">{line}</p>;
+            })}
+          </div>
         </div>
       </div>
     </div>
