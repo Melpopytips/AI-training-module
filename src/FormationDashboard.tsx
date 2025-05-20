@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { BarChart, Clock, User } from 'lucide-react';
+import { BarChart, Clock, User, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 interface QuizSubmission {
   id: string;
@@ -43,6 +44,107 @@ function FormationDashboard() {
     }
   }
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+    const lineHeight = 10;
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Title
+    doc.setFontSize(24);
+    doc.text('Formation Prompting IA', margin, yPos);
+    yPos += lineHeight * 2;
+
+    // Introduction
+    doc.setFontSize(16);
+    doc.text('Introduction : Pourquoi le prompting ?', margin, yPos);
+    yPos += lineHeight;
+    doc.setFontSize(12);
+    doc.text('L\'IA n\'est pas devin - Elle a besoin d\'instructions claires', margin, yPos);
+    yPos += lineHeight * 2;
+
+    // Les 5 éléments clés
+    doc.setFontSize(16);
+    doc.text('Les 5 éléments clés', margin, yPos);
+    yPos += lineHeight;
+    doc.setFontSize(12);
+    const elements = [
+      '1. Objectif clair - Ce que tu veux obtenir exactement',
+      '2. Contexte - Ton rôle, pôle, outils, situation',
+      '3. Contraintes - Limites, ce que tu veux éviter',
+      '4. Format souhaité - Liste, plan, modèle, etc.',
+      '5. Niveau attendu - Basique, expert, vulgarisé'
+    ];
+    elements.forEach(element => {
+      doc.text(element, margin, yPos);
+      yPos += lineHeight;
+    });
+    yPos += lineHeight;
+
+    // Le modèle universel
+    doc.setFontSize(16);
+    doc.text('Le modèle universel', margin, yPos);
+    yPos += lineHeight;
+    doc.setFontSize(12);
+    const template = [
+      'Je suis [rôle, pôle, contexte précis].',
+      'Voici mon objectif : [objectif mesurable].',
+      'Contraintes/outils : [infos techniques, limites].',
+      'Je souhaite obtenir : [type de réponse].',
+      'Fais-le de manière : [précise, experte, etc.]'
+    ];
+    template.forEach(line => {
+      doc.text(line, margin, yPos);
+      yPos += lineHeight;
+    });
+    yPos += lineHeight;
+
+    // Erreurs à éviter
+    if (yPos > doc.internal.pageSize.height - 40) {
+      doc.addPage();
+      yPos = 20;
+    }
+    doc.setFontSize(16);
+    doc.text('Erreurs à éviter', margin, yPos);
+    yPos += lineHeight;
+    doc.setFontSize(12);
+    const errors = [
+      'Trop vague - "Aide-moi à améliorer mon équipe"',
+      'Pas de contexte - "Propose-moi une idée de post"',
+      'Demandes floues - "Sois original"'
+    ];
+    errors.forEach(error => {
+      doc.text(error, margin, yPos);
+      yPos += lineHeight;
+    });
+
+    // Quiz final
+    if (yPos > doc.internal.pageSize.height - 40) {
+      doc.addPage();
+      yPos = 20;
+    }
+    doc.setFontSize(16);
+    doc.text('Quiz final', margin, yPos);
+    yPos += lineHeight;
+    doc.setFontSize(12);
+    const quiz = [
+      '1. Transformez ce mauvais prompt en bon prompt',
+      '2. Créez un prompt pour votre pôle spécifique',
+      '3. Identifiez les erreurs dans un prompt donné'
+    ];
+    quiz.forEach(question => {
+      doc.text(question, margin, yPos);
+      yPos += lineHeight;
+    });
+
+    // Footer
+    doc.setFontSize(10);
+    doc.text('© Enfin Libre - Formation Prompting IA', margin, doc.internal.pageSize.height - 10);
+
+    doc.save('formation-prompting.pdf');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -83,9 +185,18 @@ function FormationDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Formation Dashboard</h1>
-          <div className="flex items-center space-x-2 text-gray-500">
-            <Clock className="w-5 h-5" />
-            <span>Dernière mise à jour: {new Date().toLocaleString()}</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={generatePDF}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Télécharger la formation en PDF
+            </button>
+            <div className="flex items-center space-x-2 text-gray-500">
+              <Clock className="w-5 h-5" />
+              <span>Dernière mise à jour: {new Date().toLocaleString()}</span>
+            </div>
           </div>
         </div>
 
