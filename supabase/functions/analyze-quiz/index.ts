@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7';
-import { Configuration, OpenAIApi } from 'npm:openai@4.28.0';
+import OpenAI from 'npm:openai@4.28.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    const openai = new OpenAIApi(new Configuration({ apiKey: openaiKey }));
+    const openai = new OpenAI({ apiKey: openaiKey });
 
     // Initialize Supabase Admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -49,6 +49,13 @@ Deno.serve(async (req) => {
     if (fetchError || !submission) {
       throw new Error(fetchError?.message || 'Submission not found');
     }
+
+    console.log('Processing submission:', submissionId);
+    console.log('Answers received:', {
+      answer1: submission.answer_1,
+      answer2: submission.answer_2,
+      answer3: submission.answer_3
+    });
 
     // Prepare analysis prompt
     const analysisPrompt = `
@@ -91,8 +98,10 @@ Deno.serve(async (req) => {
       Niveau global : [niveau] avec justification
     `;
 
+    console.log('Sending request to OpenAI...');
+
     // Generate analysis with OpenAI
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -108,11 +117,15 @@ Deno.serve(async (req) => {
       max_tokens: 2000
     });
 
-    const analysis = completion.data.choices[0]?.message?.content;
+    console.log('Received response from OpenAI');
+
+    const analysis = completion.choices[0]?.message?.content;
     
     if (!analysis) {
       throw new Error('Failed to generate analysis');
     }
+
+    console.log('Saving analysis to database...');
 
     // Update submission with analysis
     const { error: updateError } = await supabaseAdmin
@@ -124,6 +137,8 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to save analysis: ${updateError.message}`);
     }
 
+    console.log('Analysis saved successfully');
+
     return new Response(
       JSON.stringify({ success: true, analysis }),
       { headers: corsHeaders }
@@ -131,10 +146,19 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Analysis error:', error);
+    
+    // Detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'An unknown error occurred',
+        details: error instanceof Error ? error.stack : undefined
       }),
       { 
         headers: corsHeaders,
