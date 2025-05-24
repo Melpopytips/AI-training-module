@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -21,7 +20,6 @@ Deno.serve(async (req) => {
       throw new Error('Submission ID is required');
     }
 
-    // Initialize OpenAI
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
@@ -29,7 +27,6 @@ Deno.serve(async (req) => {
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
-    // Initialize Supabase Admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -39,7 +36,6 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch submission data
     const { data: submission, error: fetchError } = await supabaseAdmin
       .from('quiz_submissions')
       .select('*')
@@ -50,7 +46,6 @@ Deno.serve(async (req) => {
       throw new Error(fetchError?.message || 'Submission not found');
     }
 
-    // Prepare analysis prompt
     const analysisPrompt = `
       En tant qu'expert en prompt engineering, analysez ces réponses de quiz et fournissez une évaluation détaillée en français.
       
@@ -91,7 +86,6 @@ Deno.serve(async (req) => {
       Niveau global : [niveau] avec justification
     `;
 
-    // Generate analysis with OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -114,7 +108,6 @@ Deno.serve(async (req) => {
       throw new Error('Failed to generate analysis');
     }
 
-    // Update submission with analysis
     const { error: updateError } = await supabaseAdmin
       .from('quiz_submissions')
       .update({ analysis })

@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -15,12 +14,10 @@ Deno.serve(async (req) => {
   try {
     const { userInfo, answers, completedModules, totalModules } = await req.json();
 
-    // Validate required fields
     if (!userInfo?.prenom || !userInfo?.nom || !userInfo?.email) {
       throw new Error('Missing required user information');
     }
 
-    // Create Supabase admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -30,7 +27,6 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Store the quiz submission
     const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
@@ -54,7 +50,6 @@ Deno.serve(async (req) => {
       throw new Error('No data returned from submission');
     }
 
-    // Trigger analysis
     const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
       method: 'POST',
       headers: {
