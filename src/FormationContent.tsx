@@ -130,13 +130,12 @@ Fais-le de manière : [précise, experte, etc.]`;
         })
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit quiz');
+        throw new Error(data.error || 'Failed to submit quiz');
       }
 
-      const data = await response.json();
-      
       if (data.success) {
         navigate('/dashboard');
       } else {

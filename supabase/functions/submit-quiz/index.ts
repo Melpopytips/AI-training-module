@@ -4,11 +4,12 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
 };
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data, error: dbError } = await supabaseAdmin
+    const { data: submission, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
         user_first_name: userInfo.prenom,
@@ -46,47 +47,49 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to save submission: ${dbError.message}`);
     }
 
-    if (!data) {
+    if (!submission) {
       throw new Error('No data returned from submission');
     }
 
+    // Wait for analysis to complete before returning
     const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${supabaseServiceKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ submissionId: data.id })
+      body: JSON.stringify({ submissionId: submission.id })
     });
+
+    if (!analyzeResponse.ok) {
+      const errorData = await analyzeResponse.json();
+      throw new Error(errorData.error || 'Failed to analyze quiz');
+    }
 
     const analyzeData = await analyzeResponse.json();
 
-    if (!analyzeResponse.ok) {
-      throw new Error(analyzeData.error || 'Failed to analyze quiz');
-    }
-
+    // Return both submission and analysis data
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         data: {
-          ...data,
+          ...submission,
           analysis: analyzeData.analysis
-        },
-        message: 'Quiz submitted and analyzed successfully'
+        }
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: corsHeaders }
     );
+
   } catch (error) {
+    console.error('Error in submit-quiz:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'An unknown error occurred'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        headers: corsHeaders,
+        status: 500
       }
     );
   }

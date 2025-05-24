@@ -124,7 +124,6 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Analysis error:', error);
-    
     return new Response(
       JSON.stringify({
         success: false,
