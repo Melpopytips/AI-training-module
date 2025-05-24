@@ -136,8 +136,8 @@ Fais-le de manière : [précise, experte, etc.]`;
         throw new Error(data.error || 'Failed to submit quiz');
       }
 
-      if (data.success) {
-        navigate('/dashboard');
+      if (data.success && data.data) {
+        navigate('/dashboard', { state: { submissionId: data.data.id } });
       } else {
         throw new Error('Failed to submit quiz');
       }
