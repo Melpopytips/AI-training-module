@@ -47,14 +47,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (dbError) {
-      throw new Error(`Database error: ${dbError.message}`);
+      throw new Error(`Failed to save submission: ${dbError.message}`);
     }
 
     if (!data) {
       throw new Error('No data returned from submission');
     }
 
-    // Trigger analysis immediately
+    // Trigger analysis
     const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
       method: 'POST',
       headers: {
@@ -64,22 +64,26 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ submissionId: data.id })
     });
 
+    const analyzeData = await analyzeResponse.json();
+
     if (!analyzeResponse.ok) {
-      throw new Error('Failed to trigger analysis');
+      throw new Error(analyzeData.error || 'Failed to analyze quiz');
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data,
-        message: 'Quiz submitted successfully'
+        data: {
+          ...data,
+          analysis: analyzeData.analysis
+        },
+        message: 'Quiz submitted and analyzed successfully'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
-    console.error('Error:', error);
     return new Response(
       JSON.stringify({ 
         success: false,
