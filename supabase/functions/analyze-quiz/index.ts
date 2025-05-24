@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,6 +21,7 @@ Deno.serve(async (req) => {
       throw new Error('Submission ID is required');
     }
 
+    // Initialize OpenAI
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
@@ -27,6 +29,7 @@ Deno.serve(async (req) => {
 
     const openai = new OpenAI({ apiKey: openaiKey });
 
+    // Initialize Supabase Admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -36,6 +39,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch submission data
     const { data: submission, error: fetchError } = await supabaseAdmin
       .from('quiz_submissions')
       .select('*')
@@ -46,6 +50,14 @@ Deno.serve(async (req) => {
       throw new Error(fetchError?.message || 'Submission not found');
     }
 
+    console.log('Processing submission:', submissionId);
+    console.log('Answers received:', {
+      answer1: submission.answer_1,
+      answer2: submission.answer_2,
+      answer3: submission.answer_3
+    });
+
+    // Prepare analysis prompt
     const analysisPrompt = `
       En tant qu'expert en prompt engineering, analysez ces réponses de quiz et fournissez une évaluation détaillée en français.
       
@@ -86,6 +98,9 @@ Deno.serve(async (req) => {
       Niveau global : [niveau] avec justification
     `;
 
+    console.log('Sending request to OpenAI...');
+
+    // Generate analysis with OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -102,12 +117,17 @@ Deno.serve(async (req) => {
       max_tokens: 2000
     });
 
+    console.log('Received response from OpenAI');
+
     const analysis = completion.choices[0]?.message?.content;
     
     if (!analysis) {
       throw new Error('Failed to generate analysis');
     }
 
+    console.log('Saving analysis to database...');
+
+    // Update submission with analysis
     const { error: updateError } = await supabaseAdmin
       .from('quiz_submissions')
       .update({ analysis })
@@ -117,6 +137,8 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to save analysis: ${updateError.message}`);
     }
 
+    console.log('Analysis saved successfully');
+
     return new Response(
       JSON.stringify({ success: true, analysis }),
       { headers: corsHeaders }
@@ -124,10 +146,19 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Analysis error:', error);
+    
+    // Detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred'
+        error: error instanceof Error ? error.message : 'An unknown error occurred',
+        details: error instanceof Error ? error.stack : undefined
       }),
       { 
         headers: corsHeaders,

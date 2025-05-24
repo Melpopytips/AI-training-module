@@ -4,21 +4,23 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
 };
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { userInfo, answers, completedModules, totalModules } = await req.json();
 
+    // Validate required fields
     if (!userInfo?.prenom || !userInfo?.nom || !userInfo?.email) {
       throw new Error('Missing required user information');
     }
 
+    // Create Supabase admin client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -28,7 +30,8 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: submission, error: dbError } = await supabaseAdmin
+    // Store the quiz submission
+    const { data, error: dbError } = await supabaseAdmin
       .from('quiz_submissions')
       .insert({
         user_first_name: userInfo.prenom,
@@ -44,52 +47,53 @@ Deno.serve(async (req) => {
       .single();
 
     if (dbError) {
-      throw new Error(`Failed to save submission: ${dbError.message}`);
+      console.error('Database error:', dbError);
+      throw new Error(`Database error: ${dbError.message}`);
     }
 
-    if (!submission) {
+    if (!data) {
       throw new Error('No data returned from submission');
     }
 
-    // Wait for analysis to complete before returning
-    const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseServiceKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ submissionId: submission.id })
-    });
+    // Trigger analysis immediately
+    try {
+      const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ submissionId: data.id })
+      });
 
-    if (!analyzeResponse.ok) {
-      const errorData = await analyzeResponse.json();
-      throw new Error(errorData.error || 'Failed to analyze quiz');
+      if (!analyzeResponse.ok) {
+        console.error('Analysis request failed:', await analyzeResponse.text());
+      }
+    } catch (analysisError) {
+      console.error('Error triggering analysis:', analysisError);
     }
 
-    const analyzeData = await analyzeResponse.json();
-
-    // Return both submission and analysis data
     return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          ...submission,
-          analysis: analyzeData.analysis
-        }
-      }),
-      { headers: corsHeaders }
-    );
-
-  } catch (error) {
-    console.error('Error in submit-quiz:', error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred'
+      JSON.stringify({ 
+        success: true, 
+        data,
+        message: 'Quiz submitted successfully'
       }),
       {
-        headers: corsHeaders,
-        status: 500
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('Error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: error.message,
+        details: 'Failed to submit quiz'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
