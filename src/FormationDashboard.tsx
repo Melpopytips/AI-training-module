@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import { BarChart, Clock, User, Download, Loader2 } from 'lucide-react';
+import { BarChart, Clock, User, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 interface QuizSubmission {
@@ -20,44 +20,13 @@ function FormationDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    const submissionId = location.state?.submissionId;
-    if (submissionId) {
-      fetchSubmission(submissionId);
-    } else {
-      fetchLatestSubmission();
-    }
-  }, [location.state]);
-
-  async function fetchSubmission(id: string) {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('quiz_submissions')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      setSubmission(data);
-
-      // If no analysis yet, poll for it
-      if (!data.analysis) {
-        pollForAnalysis(id);
-      }
-    } catch (err) {
-      console.error('Error fetching submission:', err);
-      setError('Erreur lors du chargement de votre soumission');
-    } finally {
-      setLoading(false);
-    }
-  }
+    fetchLatestSubmission();
+  }, []);
 
   async function fetchLatestSubmission() {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('quiz_submissions')
         .select('*')
@@ -65,51 +34,17 @@ function FormationDashboard() {
         .limit(1)
         .single();
 
-      if (error) throw error;
-      setSubmission(data);
-
-      // If no analysis yet, poll for it
-      if (!data.analysis) {
-        pollForAnalysis(data.id);
+      if (error) {
+        throw error;
       }
+
+      setSubmission(data);
     } catch (err) {
       console.error('Error fetching submission:', err);
       setError('Erreur lors du chargement de votre soumission');
     } finally {
       setLoading(false);
     }
-  }
-
-  async function pollForAnalysis(submissionId: string) {
-    const maxAttempts = 10;
-    let attempts = 0;
-
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        setError('L\'analyse prend plus de temps que prévu. Veuillez rafraîchir la page.');
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('quiz_submissions')
-        .select('analysis')
-        .eq('id', submissionId)
-        .single();
-
-      if (error) {
-        console.error('Polling error:', error);
-        return;
-      }
-
-      if (data.analysis) {
-        setSubmission(prev => prev ? { ...prev, analysis: data.analysis } : null);
-      } else {
-        attempts++;
-        setTimeout(poll, 2000); // Poll every 2 seconds
-      }
-    };
-
-    poll();
   }
 
   const generatePDF = () => {
@@ -265,8 +200,8 @@ function FormationDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Chargement de votre analyse...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement de votre analyse...</p>
         </div>
       </div>
     );
@@ -291,18 +226,6 @@ function FormationDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <p className="text-gray-600">Aucune soumission trouvée.</p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!submission.analysis) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Analyse de vos réponses en cours...</p>
-          <p className="text-sm text-gray-500 mt-2">Cela peut prendre quelques secondes</p>
         </div>
       </div>
     );

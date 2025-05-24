@@ -15,6 +15,7 @@ const FormationContent = () => {
     prenom: '',
     email: ''
   });
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -130,14 +131,16 @@ Fais-le de manière : [précise, experte, etc.]`;
         })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit quiz');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit quiz');
       }
 
-      if (data.success && data.data) {
-        navigate('/dashboard', { state: { submissionId: data.data.id } });
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsSubmitted(true);
+        navigate('/dashboard');
       } else {
         throw new Error('Failed to submit quiz');
       }
@@ -277,6 +280,7 @@ Fais-le de manière : [précise, experte, etc.]`;
                   ...practiceAnswers,
                   1: e.target.value
                 })}
+                disabled={isSubmitted}
               />
             </div>
 
@@ -292,6 +296,7 @@ Fais-le de manière : [précise, experte, etc.]`;
                   ...practiceAnswers,
                   2: e.target.value
                 })}
+                disabled={isSubmitted}
               />
             </div>
 
@@ -310,32 +315,35 @@ Fais-le de manière : [précise, experte, etc.]`;
                   ...practiceAnswers,
                   3: e.target.value
                 })}
+                disabled={isSubmitted}
               />
             </div>
             
-            <div className="bg-green-50 p-6 rounded-lg">
-              <button
-                onClick={submitQuiz}
-                disabled={isSubmitting}
-                className={`w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 ${
-                  isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-green-600 hover:bg-green-700'
-                } text-white transition-colors`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Les réponses sont en cours d'analyse...
-                  </>
-                ) : (
-                  <>
-                    <Trophy className="w-5 h-5" />
-                    Soumettre mes réponses et voir l'analyse
-                  </>
-                )}
-              </button>
-            </div>
+            {!isSubmitted && (
+              <div className="bg-green-50 p-6 rounded-lg">
+                <button
+                  onClick={submitQuiz}
+                  disabled={isSubmitting}
+                  className={`w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 ${
+                    isSubmitting 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white transition-colors`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Les réponses sont en cours d'analyse...
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="w-5 h-5" />
+                      Soumettre mes réponses et voir l'analyse
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         );
     }
@@ -456,9 +464,14 @@ Fais-le de manière : [précise, experte, etc.]`;
                       ? 'bg-blue-100 border border-blue-200 text-blue-800'
                       : 'hover:bg-gray-50 text-gray-700'
                   }`}
+                  disabled={completedModules.size < modules.length}
                 >
                   <div className="flex-shrink-0">
-                    <Trophy className="w-5 h-5" />
+                    {isSubmitted ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <Trophy className="w-5 h-5" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">Quiz final</p>
