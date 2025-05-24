@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (dbError) {
-      console.error('Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
@@ -56,21 +55,17 @@ Deno.serve(async (req) => {
     }
 
     // Trigger analysis immediately
-    try {
-      const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ submissionId: data.id })
-      });
+    const analyzeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-quiz`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ submissionId: data.id })
+    });
 
-      if (!analyzeResponse.ok) {
-        console.error('Analysis request failed:', await analyzeResponse.text());
-      }
-    } catch (analysisError) {
-      console.error('Error triggering analysis:', analysisError);
+    if (!analyzeResponse.ok) {
+      throw new Error('Failed to trigger analysis');
     }
 
     return new Response(
@@ -88,8 +83,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
-        details: 'Failed to submit quiz'
+        error: error instanceof Error ? error.message : 'An unknown error occurred'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

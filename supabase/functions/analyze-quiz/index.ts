@@ -50,13 +50,6 @@ Deno.serve(async (req) => {
       throw new Error(fetchError?.message || 'Submission not found');
     }
 
-    console.log('Processing submission:', submissionId);
-    console.log('Answers received:', {
-      answer1: submission.answer_1,
-      answer2: submission.answer_2,
-      answer3: submission.answer_3
-    });
-
     // Prepare analysis prompt
     const analysisPrompt = `
       En tant qu'expert en prompt engineering, analysez ces réponses de quiz et fournissez une évaluation détaillée en français.
@@ -98,8 +91,6 @@ Deno.serve(async (req) => {
       Niveau global : [niveau] avec justification
     `;
 
-    console.log('Sending request to OpenAI...');
-
     // Generate analysis with OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
@@ -117,15 +108,11 @@ Deno.serve(async (req) => {
       max_tokens: 2000
     });
 
-    console.log('Received response from OpenAI');
-
     const analysis = completion.choices[0]?.message?.content;
     
     if (!analysis) {
       throw new Error('Failed to generate analysis');
     }
-
-    console.log('Saving analysis to database...');
 
     // Update submission with analysis
     const { error: updateError } = await supabaseAdmin
@@ -137,8 +124,6 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to save analysis: ${updateError.message}`);
     }
 
-    console.log('Analysis saved successfully');
-
     return new Response(
       JSON.stringify({ success: true, analysis }),
       { headers: corsHeaders }
@@ -147,18 +132,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Analysis error:', error);
     
-    // Detailed error logging
-    if (error instanceof Error) {
-      console.error('Error name:', error.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred',
-        details: error instanceof Error ? error.stack : undefined
+        error: error instanceof Error ? error.message : 'An unknown error occurred'
       }),
       { 
         headers: corsHeaders,
